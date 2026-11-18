@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1b0f0c">
+<title>Chili Cook-Off</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌶️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rye&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1b0f0c; --bg2:#25150f; --card:#2e1a14; --card2:#3a2119; --line:#4a2c22;
+  --text:#fbefe6; --dim:#c9a99a; --mute:#8f6f62;
+  --ember:#ff5a1f; --red:#d7261e; --gold:#ffb703; --green:#4ade80;
+  --r:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom);
+  background:radial-gradient(120% 60% at 50% -10%,#4a1a0e 0%,var(--bg) 60%) fixed}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px 40px}
+.wide{max-width:1100px}
+.western{font-family:Rye,Georgia,serif;letter-spacing:.5px}
+h1,h2,h3{margin:0}
+.dim{color:var(--dim)} .mute{color:var(--mute)} .small{font-size:13px} .center{text-align:center}
+.row{display:flex;gap:10px;align-items:center} .between{justify-content:space-between} .wrapf{flex-wrap:wrap}
+.grow{flex:1}
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 18px;border-radius:14px;font-weight:700;
+  background:linear-gradient(180deg,#ff7a2f,var(--red));color:#fff;box-shadow:0 6px 18px #d7261e55;transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.4;box-shadow:none}
+.btn.ghost{background:var(--card2);box-shadow:none;border:1px solid var(--line);color:var(--text)}
+.btn.gold{background:linear-gradient(180deg,#ffd166,#f59e0b);color:#2a1300;box-shadow:0 6px 18px #f59e0b44}
+.btn.danger{background:#5b1a14;box-shadow:none;border:1px solid #8b2a20}
+.btn.sm{padding:8px 12px;font-size:14px;border-radius:10px}
+.btn.block{width:100%}
+input,select,textarea{background:#1a0d0a;border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ember)}
+label{display:block;font-size:13px;color:var(--dim);margin:12px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--card2);border:1px solid var(--line);color:var(--dim)}
+.pill.live{background:#3b120b;color:#ffb199;border-color:#7a2a18}
+.pill.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ember);margin-right:6px;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.demo{background:#3a2a05;color:#ffd166;border:1px solid #6b4e0a;padding:8px 12px;border-radius:12px;font-size:13px;margin-bottom:8px}
+.err{color:#ff9b8a;font-size:14px;margin-top:10px;min-height:1em}
+
+/* hero */
+.hero{text-align:center;padding:28px 0 8px}
+.hero .logo{font-size:64px;filter:drop-shadow(0 8px 20px #ff3d0066);animation:wiggle 3s ease-in-out infinite}
+@keyframes wiggle{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+.hero h1{font-size:34px;line-height:1.1;margin-top:6px;background:linear-gradient(180deg,#ffd9a8,#ff6a2a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0 4px}
+.topbar h1{font-size:22px;color:#ffcf9e}
+
+/* judge chili grid */
+.progress{height:10px;background:#1a0d0a;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ember));border-radius:99px;transition:width .4s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px;margin-top:14px}
+.chip{position:relative;aspect-ratio:1;border-radius:20px;background:linear-gradient(160deg,var(--card2),var(--card));border:2px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.chip b{font-family:Rye,Georgia,serif;font-size:40px;line-height:1;color:#ffd9a8}
+.chip span{font-size:12px;color:var(--mute);margin-top:6px}
+.chip.done{border-color:#7a3a14;background:linear-gradient(160deg,#4a2010,#2e1a14)}
+.chip.done span{color:var(--gold);font-weight:700}
+.chip.done::after{content:"✓";position:absolute;top:8px;right:10px;color:var(--green);font-weight:900}
+
+/* score sheet */
+.cat{margin:14px 0 4px}
+.cat .row{justify-content:space-between}
+.cat h3{font-size:17px}
+.cat .val{font-family:Rye,Georgia,serif;font-size:22px;color:var(--gold);min-width:2ch;text-align:right}
+.nums{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}
+.nums button{height:48px;border-radius:12px;background:#1a0d0a;border:1px solid var(--line);font-weight:800;font-size:18px;color:var(--dim)}
+.nums button.on{color:#fff;border-color:transparent;transform:scale(1.04)}
+.heat{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px}
+.heat .tot{font-family:Rye,Georgia,serif;font-size:40px;color:#ffd9a8}
+.peppers{font-size:26px;letter-spacing:2px}
+.peppers .off{opacity:.15;filter:grayscale(1)}
+.sticky{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,var(--bg) 70%,transparent)}
+
+/* admin */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 0 2px;scrollbar-width:none}
+.tabs button{padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--dim);font-weight:700;white-space:nowrap}
+.tabs button.on{background:linear-gradient(180deg,#ff7a2f,var(--red));color:#fff;border-color:transparent}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.groups .card{margin:0;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #3a221a;font-size:14px}
+th{color:var(--mute);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.lead td{background:#3d1d0f}
+.letter{font-family:Rye,Georgia,serif;font-size:20px;color:#ffd9a8}
+.bar{height:6px;background:#1a0d0a;border-radius:9px;overflow:hidden;min-width:50px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ember))}
+.stat{display:flex;gap:12px;flex-wrap:wrap}
+.stat>div{flex:1;min-width:120px;background:#1a0d0a;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:24px;font-family:Rye,Georgia,serif;color:#ffd9a8}
+.matrix{overflow-x:auto}
+.matrix table{min-width:600px}
+.matrix td,.matrix th{text-align:center;font-size:13px;padding:6px 4px}
+.matrix td:first-child,.matrix th:first-child{text-align:left;white-space:nowrap}
+.qrbox{background:#fff;border-radius:20px;padding:18px;display:inline-block}
+.qrbox img,.qrbox svg{display:block;width:260px;height:260px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(120px);background:#120806;border:1px solid var(--ember);
+  padding:12px 18px;border-radius:14px;font-weight:700;transition:transform .25s;z-index:50;box-shadow:0 10px 30px #000a}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* reveal */
+.reveal{position:fixed;inset:0;z-index:40;background:radial-gradient(80% 60% at 50% 40%,#5a1a0a,#0d0604 70%);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:24px;user-select:none}
+.reveal .stage{font-family:Rye,Georgia,serif}
+.reveal .place{font-size:22px;color:var(--dim);margin-bottom:6px}
+.reveal .big{font-size:min(38vw,240px);line-height:1;color:#ffd9a8;text-shadow:0 10px 60px #ff5a1f}
+.reveal .who{font-size:min(8vw,46px);color:#fff;margin-top:8px}
+.reveal .score{font-size:20px;color:var(--gold);margin-top:8px}
+.reveal .hint{position:absolute;bottom:24px;color:var(--mute);font-size:14px}
+.reveal .x{position:absolute;top:16px;right:16px}
+.pop{animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+.drum{font-size:80px;animation:shake .15s infinite}
+@keyframes shake{0%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}100%{transform:rotate(-6deg)}}
+canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+
+@media print{
+  body{background:#fff;color:#000}
+  .noprint{display:none!important}
+  .printonly{display:block!important}
+}
+.printonly{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<canvas id="confetti"></canvas>
+<script src="config.js"></script>
+<script src="qrcode.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   Basics
+   ========================================================= */
+const API = String(window.CHILI_API || '').trim();
+const DEMO = !API;
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const CATS = [
+  ['taste','Taste','👅'],
+  ['texture','Texture','🥄'],
+  ['appearance','Appearance','👀'],
+  ['aroma','Aroma','👃']
+];
+const ROUND_NAME = {setup:'Warming up', round1:'Round 1', final:'Final Round', done:'Complete'};
+const app = document.getElementById('app');
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = (n, d=1) => n == null ? '—' : Number(n).toFixed(d);
+function lsGet(k, fb){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; }catch(e){ return fb; } }
+function lsSet(k, v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+let toastT;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+
+function ask(msg){
+  return new Promise(res => {
+    const d = document.createElement('div');
+    d.className = 'reveal'; d.style.background = '#000c'; d.style.zIndex = 70;
+    d.innerHTML = `<div class="card" style="max-width:380px;width:100%;text-align:left"><p style="white-space:pre-line;margin:0 0 16px">${esc(msg)}</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" data-r="0">Cancel</button><button class="btn sm" data-r="1">Yes</button></div></div>`;
+    d.addEventListener('click', e => { const b = e.target.closest('[data-r]'); if(!b) return; e.stopPropagation(); d.remove(); res(b.dataset.r === '1'); });
+    document.body.appendChild(d);
+  });
+}
+
+function splitGroups(chilis, n){
+  const groups = [];
+  const base = Math.floor(chilis.length / n), extra = chilis.length % n;
+  let i = 0;
+  for(let g = 0; g < n; g++){
+    const size = base + (g < extra ? 1 : 0);
+    groups.push({name: 'Group ' + (g+1), chilis: chilis.slice(i, i + size)});
+    i += size;
+  }
+  return groups;
+}
+function defaultConfig(){
+  const chiliCount = 20, groupCount = 4;
+  return {
+    eventName: 'Chili Cook-Off', chiliCount, groupCount,
+    groups: splitGroups(LETTERS.slice(0, chiliCount), groupCount),
+    phase: 'setup', finalists: [], cooks: {}, allJudgesAllGroups: false,
+    winner: null, revealed: false
+  };
+}
+
+/* =========================================================
+   Backend: Google Apps Script (live) or localStorage (demo)
+   ========================================================= */
+const DEMO_PIN = '2026';
+const Local = {
+  key: 'chili-demo-db',
+  load(){ return lsGet(this.key, null) || {config:null, judges:[], scores:[]}; },
+  save(db){ lsSet(this.key, db); },
+  async call(action, d){
+    await sleep(80);
+    const db = this.load();
+    const cfg = db.config || defaultConfig();
+    if(action === 'state'){
+      return {config: db.config, judges: db.judges.map(j => ({id:j.id, name:j.name, group:j.group, joinedAt:j.joinedAt})), scores: db.scores};
+    }
+    if(action === 'join'){
+      const name = String(d.name||'').trim(), pin = String(d.pin||'').trim();
+      if(!name) throw new Error('Enter your name');
+      if(!/^\d{4}$/.test(pin)) throw new Error('PIN must be 4 digits');
+      const ex = db.judges.find(j => j.name.toLowerCase() === name.toLowerCase());
+      if(ex){
+        if(ex.pin !== pin) throw new Error('That name is taken. Wrong PIN, or pick a different name.');
+        return {judge: {id:ex.id, name:ex.name, group:ex.group}};
+      }
+      const counts = Array(cfg.groupCount).fill(0);
+      db.judges.forEach(j => { if(j.group < cfg.groupCount) counts[j.group]++; });
+      let group = 0; counts.forEach((c,i) => { if(c < counts[group]) group = i; });
+      const j = {id: Math.random().toString(36).slice(2,10), name, pin, group, joinedAt: new Date().toISOString()};
+      db.judges.push(j); this.save(db);
+      return {judge: {id:j.id, name:j.name, group:j.group}};
+    }
+    if(action === 'score'){
+      const j = db.judges.find(x => x.id === d.judgeId);
+      if(!j || j.pin !== String(d.pin)) throw new Error('Please sign in again');
+      if(cfg.phase !== d.round) throw new Error('That round is closed');
+      const s = {round:d.round, judgeId:j.id, judgeName:j.name, chili:d.chili, notes:String(d.notes||'').slice(0,300), updatedAt:new Date().toISOString()};
+      let total = 0;
+      for(const [k] of CATS){ const v = Math.round(Number(d[k])); if(!(v>=1 && v<=10)) throw new Error('Scores must be 1–10'); s[k]=v; total+=v; }
+      s.total = total;
+      const i = db.scores.findIndex(x => x.round===s.round && x.judgeId===s.judgeId && x.chili===s.chili);
+      if(i >= 0) db.scores[i] = s; else db.scores.push(s);
+      this.save(db); return {};
+    }
+    if(action === 'admin'){
+      if(String(d.pin) !== DEMO_PIN) throw new Error('Wrong master PIN');
+      switch(d.op){
+        case 'check': return {};
+        case 'saveConfig': db.config = d.config; break;
+        case 'setGroup': { const j = db.judges.find(x => x.id === d.judgeId); if(j) j.group = Number(d.group); break; }
+        case 'removeJudge': db.judges = db.judges.filter(x => x.id !== d.judgeId); break;
+        case 'resetScores': db.scores = []; break;
+        case 'resetAll': db.scores = []; db.judges = []; if(d.config) db.config = d.config; break;
+        default: throw new Error('Unknown admin op');
+      }
+      this.save(db); return {};
+    }
+    throw new Error('Unknown action');
+  }
+};
+
+async function call(action, payload){
+  if(DEMO) return Local.call(action, payload || {});
+  let res;
+  if(action === 'state'){
+    res = await fetch(API + (API.includes('?') ? '&' : '?') + 'action=state&t=' + Date.now());
+  }else{
+    res = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({action, payload})});
+  }
+  const j = await res.json();
+  if(!j.ok) throw new Error(j.error || 'Server error');
+  return j;
+}
+
+/* =========================================================
+   State + scoring math
+   ========================================================= */
+let S = {config: null, judges: [], scores: [], loaded: false, error: null};
+const cfg = () => S.config || defaultConfig();
+
+async function refresh(){
+  try{
+    const st = await call('state');
+    S.config = st.config; S.judges = st.judges || []; S.scores = st.scores || [];
+    S.loaded = true;
+    const sig = JSON.stringify(st.config) + JSON.stringify(st.judges) + JSON.stringify(st.scores);
+    S.changed = sig !== S.sig || S.error != null; S.sig = sig; S.error = null;
+  }catch(e){
+    S.changed = S.error == null; S.error = 'Connection hiccup — retrying…';
+  }
+}
+
+function groupIndexOfChili(c){ return cfg().groups.findIndex(g => g.chilis.includes(c)); }
+function allChilis(){ return cfg().groups.flatMap(g => g.chilis); }
+
+function chilisFor(judge){
+  const c = cfg();
+  if(!judge) return [];
+  if(c.phase === 'round1') return c.allJudgesAllGroups ? allChilis() : ((c.groups[judge.group] || {}).chilis || []);
+  if(c.phase === 'final') return c.finalists || [];
+  return [];
+}
+function judgesForGroup(gi){
+  return cfg().allJudgesAllGroups ? S.judges : S.judges.filter(j => Number(j.group) === gi);
+}
+function scoresOf(round, judgeId){ return S.scores.filter(s => s.round === round && s.judgeId === judgeId); }
+
+function standings(round, chilis){
+  return chilis.map(c => {
+    const sc = S.scores.filter(s => s.round === round && s.chili === c);
+    const n = sc.length;
+    const avg = k => n ? sc.reduce((a,s) => a + Number(s[k]), 0) / n : null;
+    return {chili:c, n, avg:avg('total'), taste:avg('taste'), texture:avg('texture'), appearance:avg('appearance'), aroma:avg('aroma')};
+  }).sort((a,b) =>
+    (b.avg ?? -1) - (a.avg ?? -1) ||
+    (b.taste ?? -1) - (a.taste ?? -1) ||
+    (b.aroma ?? -1) - (a.aroma ?? -1) ||
+    a.chili.localeCompare(b.chili));
+}
+function tied(a, b){
+  return a && b && a.n && b.n && Math.abs(a.avg-b.avg) < 1e-9 && Math.abs(a.taste-b.taste) < 1e-9 && Math.abs(a.aroma-b.aroma) < 1e-9;
+}
+function cook(c){ const n = (cfg().cooks || {})[c]; return n ? esc(n) : ''; }
+
+function pepperRow(total){
+  const lit = total ? Math.max(1, Math.round((total / 40) * 5)) : 0;
+  let h = '';
+  for(let i = 0; i < 5; i++) h += `<span class="${i < lit ? '' : 'off'}">🌶️</span>`;
+  return `<span class="peppers">${h}</span>`;
+}
+function heatColor(v){
+  // 1 = cool ash, 10 = blazing red
+  const stops = ['#6b5a52','#7a6a3a','#9a7a1a','#c08a10','#e09a0a','#f08a0a','#f5700f','#f25418','#e2381c','#d01f1f'];
+  return stops[Math.max(0, Math.min(9, v-1))];
+}
+
+/* =========================================================
+   JUDGE VIEW
+   ========================================================= */
+let me = lsGet('chili-me', null);   // {id,name,pin,group}
+let editing = null;                  // chili letter being scored
+let draft = {};
+let lastPhase = null;
+
+function myJudge(){
+  if(!me) return null;
+  const j = S.judges.find(x => x.id === me.id);
+  return j ? Object.assign({}, me, {group: Number(j.group)}) : (S.loaded ? null : me);
+}
+
+function renderJudge(){
+  const c = cfg();
+  if(!me) return renderJoin();
+  const j = myJudge();
+  if(!j){ // removed by admin
+    me = null; lsSet('chili-me', null); return renderJoin();
+  }
+  if(editing) return renderScoreSheet(j);
+
+  const head = `
+    ${DEMO ? '<div class="demo">Demo mode: scores only save on this device. Connect the Google Sheet before the event.</div>' : ''}
+    <div class="topbar">
+      <div>
+        <div class="small mute">${esc(c.eventName)}</div>
+        <h1 class="western">Judge ${esc(j.name)}</h1>
+      </div>
+      <div style="text-align:right">
+        <span class="pill ${c.phase==='round1'||c.phase==='final' ? 'live' : ''}">${ROUND_NAME[c.phase] || ''}</span>
+        <div class="small mute" style="margin-top:6px">${c.phase==='final' || c.phase==='done' ? 'All judges' : c.allJudgesAllGroups ? 'All groups' : esc((c.groups[j.group]||{}).name || ('Group ' + (j.group+1)))}</div>
+      </div>
+    </div>`;
+
+  let body = '';
+  if(c.phase === 'setup'){
+    body = `<div class="card center">
+      <div style="font-size:54px">🍲</div>
+      <h2 class="western" style="margin:6px 0">You're in!</h2>
+      <p class="dim">You'll be judging <b>${c.allJudgesAllGroups ? 'every group' : esc((c.groups[j.group]||{}).name || '')}</b>. Grab a spoon and a water.
+      This screen updates by itself when Round 1 starts.</p>
+    </div>`;
+  }else if(c.phase === 'round1' || c.phase === 'final'){
+    const list = chilisFor(j);
+    const mine = scoresOf(c.phase, j.id);
+    const done = list.filter(ch => mine.some(s => s.chili === ch)).length;
+    const pct = list.length ? Math.round(done / list.length * 100) : 0;
+    body = `
+      ${c.phase==='final' ? `<div class="card center"><div style="font-size:40px">🏆</div><h2 class="western">The Final ${list.length}</h2><p class="dim small" style="margin:6px 0 0">Each group's champ. Every judge scores all of them. Winner takes all.</p></div>` : ''}
+      <div class="card">
+        <div class="row between"><b>${done} of ${list.length} scored</b><span class="small mute">${done===list.length && list.length ? 'All done 🔥 You can still tweak until the round locks.' : 'Tap a chili to score it'}</span></div>
+        <div class="progress" style="margin-top:10px"><i style="width:${pct}%"></i></div>
+        <div class="grid">
+          ${list.map(ch => {
+            const s = mine.find(x => x.chili === ch);
+            return `<button class="chip ${s?'done':''}" data-act="open" data-c="${ch}"><b>${ch}</b><span>${s ? s.total + ' / 40' : 'Tap to score'}</span></button>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }else if(c.phase === 'done'){
+    if(c.revealed && c.winner){
+      body = `<div class="card center">
+        <div style="font-size:64px">🏆</div>
+        <div class="small mute">Champion</div>
+        <div class="western" style="font-size:72px;color:#ffd9a8;line-height:1.1">${esc(c.winner)}</div>
+        ${cook(c.winner) ? `<h2 class="western">${cook(c.winner)}</h2>` : ''}
+        <p class="dim">Thanks for judging!</p></div>`;
+    }else{
+      body = `<div class="card center"><div class="drum">🥁</div><h2 class="western">Scores are locked</h2><p class="dim">Stand by for the big reveal…</p></div>`;
+    }
+  }
+  const foot = `<div class="center small mute" style="margin-top:20px">Not ${esc(j.name)}? <button class="small" style="color:var(--ember);text-decoration:underline" data-act="logout">Switch judge</button></div>`;
+  app.innerHTML = `<div class="wrap">${head}${body}${S.error ? `<div class="err center">${esc(S.error)}</div>` : ''}${foot}</div>`;
+}
+
+function renderJoin(){
+  const c = cfg();
+  app.innerHTML = `<div class="wrap" style="max-width:440px">
+    ${DEMO ? '<div class="demo">Demo mode: scores only save on this device.</div>' : ''}
+    <div class="hero">
+      <div class="logo">🌶️</div>
+      <h1 class="western">${esc(c.eventName)}</h1>
+      <div class="dim" style="margin-top:6px">Official Judge Check-In</div>
+    </div>
+    <div class="card">
+      <form id="joinForm" autocomplete="off">
+        <label for="jn">Your name</label>
+        <input id="jn" maxlength="30" placeholder="e.g. Sam" value="${esc(lsGet('chili-lastname',''))}" autocapitalize="words">
+        <label for="jp">4-digit PIN</label>
+        <input id="jp" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center">
+        <div class="small mute" style="margin-top:8px">First time? Make up any 4 digits. Coming back on another phone? Use the same name + PIN.</div>
+        <div class="err" id="joinErr"></div>
+        <button class="btn block" style="margin-top:6px" type="submit" id="joinBtn">Grab a spoon 🥄</button>
+      </form>
+    </div>
+  </div>`;
+  document.getElementById('joinForm').onsubmit = async e => {
+    e.preventDefault();
+    const name = document.getElementById('jn').value.trim();
+    const pin = document.getElementById('jp').value.trim();
+    const err = document.getElementById('joinErr'), btn = document.getElementById('joinBtn');
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Checking in…';
+    try{
+      const r = await call('join', {name, pin});
+      me = Object.assign({}, r.judge, {pin});
+      lsSet('chili-me', me); lsSet('chili-lastname', name);
+      await refresh(); render();
+      toast('Welcome, Judge ' + me.name + ' 🌶️');
+    }catch(ex){
+      err.textContent = ex.message; btn.disabled = false; btn.textContent = 'Grab a spoon 🥄';
+    }
+  };
+}
+
+function renderScoreSheet(j){
+  const c = cfg();
+  const total = CATS.reduce((a,[k]) => a + (draft[k] || 0), 0);
+  const ready = CATS.every(([k]) => draft[k]);
+  const list = chilisFor(j);
+  const idx = list.indexOf(editing);
+  app.innerHTML = `<div class="wrap" style="max-width:520px">
+    <div class="topbar">
+      <button class="btn ghost sm" data-act="back">‹ All chilis</button>
+      <span class="small mute">${idx+1} of ${list.length} · ${ROUND_NAME[c.phase]}</span>
+    </div>
+    <div class="center" style="margin:6px 0 4px">
+      <div class="small mute">Now judging</div>
+      <div class="western" style="font-size:84px;line-height:1;color:#ffd9a8;text-shadow:0 8px 30px #ff5a1f66">${esc(editing)}</div>
+    </div>
+    ${CATS.map(([k,label,icon]) => `
+      <div class="card cat">
+        <div class="row"><h3>${icon} ${label}</h3><span class="val">${draft[k] || '–'}</span></div>
+        <div class="nums">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n => `<button data-act="pick" data-k="${k}" data-n="${n}" class="${draft[k]===n?'on':''}" ${draft[k]===n?`style="background:${heatColor(n)}"`:''}>${n}</button>`).join('')}
+        </div>
+      </div>`).join('')}
+    <label for="notes">Notes (only you and the host see these)</label>
+    <textarea id="notes" rows="2" style="margin-bottom:12px" maxlength="300" placeholder="Smoky, great beans, needs salt…">${esc(draft.notes || '')}</textarea>
+    <div class="sticky">
+      <div class="heat"><div><div class="small mute">Total</div><div class="tot">${total}<span class="small mute"> / 40</span></div></div>${pepperRow(total)}</div>
+      <button class="btn block" data-act="save" ${ready?'':'disabled'} style="margin-top:8px">${ready ? 'Lock it in 🔥' : 'Score all 4 categories'}</button>
+    </div>
+  </div>`;
+  document.getElementById('notes').oninput = e => { draft.notes = e.target.value; };
+}
+
+async function saveScore(){
+  const j = myJudge(); if(!j) return;
+  const c = cfg();
+  const payload = Object.assign({judgeId: j.id, pin: me.pin, round: c.phase, chili: editing}, draft);
+  const btn = app.querySelector('[data-act="save"]');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  try{
+    await call('score', payload);
+    // optimistic local update
+    const total = CATS.reduce((a,[k]) => a + draft[k], 0);
+    const s = Object.assign({}, payload, {judgeName: j.name, total}); delete s.pin;
+    const i = S.scores.findIndex(x => x.round===s.round && x.judgeId===s.judgeId && x.chili===s.chili);
+    if(i >= 0) S.scores[i] = s; else S.scores.push(s);
+    const list = chilisFor(j);
+    const mine = scoresOf(c.phase, j.id);
+    const next = list.find(ch => !mine.some(x => x.chili === ch));
+    toast(`Chili ${editing}: ${total}/40 saved 🔥`);
+    if(next){ openChili(next); }
+    else { editing = null; render(); if(list.length) setTimeout(() => confetti(1500), 150); }
+    window.scrollTo(0,0);
+  }catch(e){
+    toast('⚠️ ' + e.message);
+    if(btn){ btn.disabled = false; btn.textContent = 'Try again'; }
+    if(/closed/.test(e.message)){ editing = null; await refresh(); render(); }
+  }
+}
+
+function openChili(ch){
+  const j = myJudge();
+  const s = scoresOf(cfg().phase, j.id).find(x => x.chili === ch);
+  draft = s ? {taste:s.taste, texture:s.texture, appearance:s.appearance, aroma:s.aroma, notes:s.notes||''} : {};
+  editing = ch; render(); window.scrollTo(0,0);
+}
+
+/* =========================================================
+   ADMIN VIEW
+   ========================================================= */
+let adminPin = lsGet('chili-admin', null);
+let tab = 'live';
+let lockPreview = null;   // finalists picks while confirming round 1 lock
+let revealStep = -1;
+
+function renderAdminGate(){
+  app.innerHTML = `<div class="wrap" style="max-width:420px">
+    <div class="hero"><div class="logo">👨‍🍳</div><h1 class="western">Head Judge</h1><div class="dim">Master scoreboard</div></div>
+    <div class="card">
+      <form id="pinForm">
+        <label for="ap">Master PIN</label>
+        <input id="ap" inputmode="numeric" pattern="[0-9]*" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center">
+        ${DEMO ? '<div class="small mute" style="margin-top:8px">Demo PIN is 2026</div>' : ''}
+        <div class="err" id="pinErr"></div>
+        <button class="btn block" type="submit">Open scoreboard</button>
+      </form>
+    </div></div>`;
+  document.getElementById('pinForm').onsubmit = async e => {
+    e.preventDefault();
+    const pin = document.getElementById('ap').value.trim();
+    try{ await call('admin', {pin, op:'check'}); adminPin = pin; lsSet('chili-admin', pin); await ensureConfig(); render(); }
+    catch(ex){ document.getElementById('pinErr').textContent = ex.message; }
+  };
+}
+
+async function ensureConfig(){
+  await refresh();
+  if(!S.config){ await adminOp('saveConfig', {config: defaultConfig()}, true); }
+}
+
+async function adminOp(op, extra, silent){
+  try{
+    await call('admin', Object.assign({pin: adminPin, op}, extra || {}));
+    await refresh(); render();
+    return true;
+  }catch(e){
+    if(/master PIN/.test(e.message)){ adminPin = null; lsSet('chili-admin', null); }
+    if(!silent) toast('⚠️ ' + e.message);
+    render(); return false;
+  }
+}
+const saveCfg = (patch, msg) => adminOp('saveConfig', {config: Object.assign({}, cfg(), patch)}).then(ok => { if(ok && msg) toast(msg); return ok; });
+
+function renderAdmin(){
+  if(!adminPin) return renderAdminGate();
+  const c = cfg();
+  const tabs = [['live','🔥 Live'],['judges','🧑‍⚖️ Judges ('+S.judges.length+')'],['setup','⚙️ Setup'],['qr','📱 QR code'],['data','📋 Scores']];
+  let body = '';
+  if(tab === 'live') body = adminLive();
+  if(tab === 'judges') body = adminJudges();
+  if(tab === 'setup') body = adminSetup();
+  if(tab === 'qr') body = adminQR();
+  if(tab === 'data') body = adminData();
+  app.innerHTML = `<div class="wrap wide">
+    ${DEMO ? '<div class="demo noprint">Demo mode: everything saves on this device only. Open the judge link in another tab to play both sides.</div>' : ''}
+    <div class="topbar noprint">
+      <div><div class="small mute">Head Judge</div><h1 class="western">${esc(c.eventName)}</h1></div>
+      <span class="pill ${c.phase==='round1'||c.phase==='final'?'live':''}">${ROUND_NAME[c.phase]}</span>
+    </div>
+    <div class="tabs noprint">${tabs.map(([k,l]) => `<button data-act="tab" data-t="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</div>
+    ${S.error ? `<div class="err noprint">${esc(S.error)}</div>` : ''}
+    ${body}
+  </div>`;
+  if(tab === 'qr') drawQR();
+}
+
+function phaseCard(){
+  const c = cfg();
+  const nJ = S.judges.length;
+  const roundScores = S.scores.filter(s => s.round === c.phase);
+  let expected = 0;
+  if(c.phase === 'round1') expected = S.judges.reduce((a,j) => a + chilisFor(j).length, 0);
+  if(c.phase === 'final') expected = nJ * (c.finalists || []).length;
+  const pct = expected ? Math.min(100, Math.round(roundScores.length / expected * 100)) : 0;
+
+  let action = '';
+  if(c.phase === 'setup'){
+    action = `<p class="dim">Judges can check in now. They'll be auto-split into ${c.allJudgesAllGroups ? 'one pool (everyone scores everything)' : c.groupCount + ' groups'}. Start Round 1 when spoons are ready.</p>
+      <button class="btn" data-act="phase" data-p="round1" ${nJ ? '' : 'disabled'}>Start Round 1 🔔</button>${nJ ? '' : '<div class="small mute" style="margin-top:8px">Waiting for at least one judge to check in.</div>'}`;
+  }else if(c.phase === 'round1'){
+    if(lockPreview){
+      action = `<h3 class="western" style="margin-bottom:8px">Confirm finalists</h3>
+        <p class="dim small">Group leaders are pre-picked. Change one if there's a tie or you need to override.</p>
+        ${c.groups.map((g,gi) => {
+          const st = standings('round1', g.chilis);
+          const tie = tied(st[0], st[1]);
+          return `<div class="row" style="margin:8px 0"><div style="width:110px">${esc(g.name)}</div>
+            <select data-act="pickFinal" data-g="${gi}" style="max-width:240px">${st.map(r => `<option value="${r.chili}" ${lockPreview[gi]===r.chili?'selected':''}>${r.chili}${cook(r.chili)?' · '+cook(r.chili):''} — ${fmt(r.avg)}</option>`).join('')}</select>
+            ${tie ? '<span class="pill" style="color:var(--gold)">⚠️ tie</span>' : ''}</div>`;
+        }).join('')}
+        <div class="row wrapf" style="margin-top:12px"><button class="btn gold" data-act="confirmFinal">Lock Round 1 & start the Final 🏆</button><button class="btn ghost" data-act="cancelPreview">Cancel</button></div>`;
+    }else{
+      action = `<div class="row between"><b>${roundScores.length} of ${expected} scorecards in</b><span class="small mute">${pct}%</span></div>
+        <div class="progress" style="margin:10px 0 14px"><i style="width:${pct}%"></i></div>
+        <button class="btn gold" data-act="preview">Lock Round 1 & pick finalists</button>
+        <button class="btn ghost sm" data-act="phase" data-p="setup" style="margin-left:6px">Back to warm-up</button>`;
+    }
+  }else if(c.phase === 'final'){
+    action = `<div class="row between"><b>${roundScores.length} of ${expected} final scorecards in</b><span class="small mute">${pct}%</span></div>
+      <div class="progress" style="margin:10px 0 14px"><i style="width:${pct}%"></i></div>
+      <button class="btn gold" data-act="crown">Lock the Final & crown a winner 👑</button>
+      <button class="btn ghost sm" data-act="phase" data-p="round1" style="margin-left:6px">Reopen Round 1</button>`;
+  }else if(c.phase === 'done'){
+    action = `<p class="dim">Winner is locked in: <b class="letter">${esc(c.winner||'?')}</b> ${cook(c.winner)}. Put this on the big screen (or hold up your phone) and tap through the reveal.</p>
+      <button class="btn gold" data-act="reveal">🎉 Start the reveal</button>
+      <button class="btn ghost sm" data-act="phase" data-p="final" style="margin-left:6px">Reopen Final</button>`;
+  }
+  return `<div class="card">
+    <div class="stat" style="margin-bottom:14px">
+      <div><span class="small mute">Judges</span><b>${nJ}</b></div>
+      <div><span class="small mute">Chilis</span><b>${allChilis().length}</b></div>
+      <div><span class="small mute">Round</span><b style="font-size:18px;padding-top:4px">${ROUND_NAME[c.phase]}</b></div>
+    </div>${action}</div>`;
+}
+
+function standingsTable(round, chilis, expectedFn){
+  const st = standings(round, chilis);
+  return `<table><thead><tr><th>#</th><th>Chili</th><th class="num">Cards</th><th class="num">👅</th><th class="num">🥄</th><th class="num">👀</th><th class="num">👃</th><th class="num">Avg</th><th></th></tr></thead><tbody>
+    ${st.map((r,i) => `<tr class="${i===0 && r.n ? 'lead' : ''}">
+      <td>${i===0 && r.n ? '👑' : i+1}</td>
+      <td><span class="letter">${r.chili}</span> <span class="small dim">${cook(r.chili)}</span></td>
+      <td class="num small ${r.n < expectedFn(r.chili) ? 'mute' : ''}">${r.n}/${expectedFn(r.chili)}</td>
+      <td class="num small dim">${fmt(r.taste)}</td><td class="num small dim">${fmt(r.texture)}</td><td class="num small dim">${fmt(r.appearance)}</td><td class="num small dim">${fmt(r.aroma)}</td>
+      <td class="num"><b>${fmt(r.avg)}</b></td>
+      <td style="width:56px"><div class="bar" style="min-width:40px"><i style="width:${r.avg ? r.avg/40*100 : 0}%"></i></div></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function adminLive(){
+  const c = cfg();
+  let h = phaseCard();
+  if(c.phase === 'final' || c.phase === 'done'){
+    h += `<div class="card"><h2 class="western" style="margin-bottom:8px">🏆 Final Round</h2>
+      ${standingsTable('final', c.finalists || [], () => S.judges.length)}
+      <div class="small mute" style="margin-top:8px">Ranked by average total (out of 40). Ties broken by Taste, then Aroma.</div></div>`;
+  }
+  h += `<h2 class="western" style="margin:20px 0 4px">Round 1 · Groups</h2>
+    <div class="groups">${c.groups.map((g,gi) => {
+      const js = judgesForGroup(gi);
+      return `<div class="card">
+        <div class="row between"><h3 class="western">${esc(g.name)}</h3><span class="small mute">${c.allJudgesAllGroups ? 'All judges' : js.length + ' judge' + (js.length===1?'':'s')}</span></div>
+        <div class="small dim" style="margin:4px 0 8px">${c.allJudgesAllGroups ? '' : (js.map(j => esc(j.name)).join(', ') || 'No judges yet')}</div>
+        ${standingsTable('round1', g.chilis, () => js.length)}
+      </div>`;
+    }).join('')}</div>`;
+  return h;
+}
+
+function adminJudges(){
+  const c = cfg();
+  if(!S.judges.length) return `<div class="card center"><div style="font-size:44px">🪑</div><p class="dim">No judges yet. Show them the QR code tab.</p></div>`;
+  const round = c.phase === 'final' ? 'final' : 'round1';
+  return `<div class="card">
+    <div class="row between wrapf"><h3 class="western">Judges</h3>
+      <button class="btn ghost sm" data-act="balance" ${c.allJudgesAllGroups?'disabled':''}>Auto-balance groups</button></div>
+    <table style="margin-top:8px"><thead><tr><th>Name</th><th>Group</th><th class="num">${ROUND_NAME[round]}</th><th></th></tr></thead><tbody>
+    ${S.judges.map(j => {
+      const need = round === 'final' ? (c.finalists||[]).length : (c.allJudgesAllGroups ? allChilis().length : ((c.groups[j.group]||{}).chilis||[]).length);
+      const got = scoresOf(round, j.id).length;
+      return `<tr><td><b>${esc(j.name)}</b></td>
+        <td><select data-act="setGroup" data-j="${j.id}" style="padding:6px 8px;width:auto" ${c.allJudgesAllGroups?'disabled':''}>${c.groups.map((g,gi) => `<option value="${gi}" ${Number(j.group)===gi?'selected':''}>${esc(g.name)}</option>`).join('')}</select></td>
+        <td class="num">${got}/${need} ${got>=need && need ? '✅' : ''}</td>
+        <td class="num"><button class="btn danger sm" data-act="removeJudge" data-j="${j.id}" data-n="${esc(j.name)}">Remove</button></td></tr>`;
+    }).join('')}</tbody></table>
+    <div class="small mute" style="margin-top:10px">Moving a judge to another group keeps their old scores, but they only count for the chilis they scored.</div>
+  </div>`;
+}
+
+function adminSetup(){
+  const c = cfg();
+  return `<div class="card">
+    <h3 class="western">Event</h3>
+    <label>Event name</label><input id="sEvent" value="${esc(c.eventName)}">
+    <div class="row wrapf">
+      <div class="grow"><label>Number of chilis</label><input id="sChilis" type="number" min="2" max="26" value="${c.chiliCount}"></div>
+      <div class="grow"><label>Number of groups</label><input id="sGroups" type="number" min="1" max="8" value="${c.groupCount}"></div>
+    </div>
+    <div class="small mute" style="margin-top:8px">Changing these re-splits chilis evenly (A–E, F–J…). You can hand-edit each group below.</div>
+    <label class="row" style="text-transform:none;font-size:15px;color:var(--text);gap:10px;margin-top:16px">
+      <input id="sAll" type="checkbox" style="width:22px;height:22px" ${c.allJudgesAllGroups?'checked':''}> Every judge scores every chili in Round 1 (no judge groups)</label>
+    <h3 class="western" style="margin-top:20px">Groups</h3>
+    ${c.groups.map((g,gi) => `<div class="row wrapf" style="margin-top:8px">
+      <input data-gname="${gi}" value="${esc(g.name)}" style="max-width:180px">
+      <input data-gchilis="${gi}" value="${g.chilis.join(' ')}" class="grow" style="min-width:160px;letter-spacing:2px">
+    </div>`).join('')}
+    <h3 class="western" style="margin-top:20px">Who made what (optional)</h3>
+    <div class="small mute">Judges never see these. Shown on your scoreboard and at the reveal.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px">
+      ${allChilis().map(ch => `<div class="row"><span class="letter" style="width:24px">${ch}</span><input data-cook="${ch}" value="${esc((c.cooks||{})[ch]||'')}" placeholder="Cook's name"></div>`).join('')}
+    </div>
+    <button class="btn" data-act="saveSetup" style="margin-top:18px">Save setup</button>
+  </div>
+  <div class="card">
+    <h3 class="western">Danger zone</h3>
+    <p class="small dim">Use these to wipe a test run before the real thing.</p>
+    <div class="row wrapf"><button class="btn danger sm" data-act="resetScores">Erase all scores</button>
+    <button class="btn danger sm" data-act="resetAll">Erase everything (judges + scores)</button>
+    ${DEMO ? '<button class="btn ghost sm" data-act="simulate">🤖 Simulate 10 judges</button>' : ''}</div>
+  </div>`;
+}
+
+function judgeUrl(){ return location.href.split('#')[0].split('?')[0]; }
+function adminQR(){
+  return `<div class="card center">
+    <div class="printonly"><h1 class="western" style="font-size:40px;color:#000">${esc(cfg().eventName)}</h1></div>
+    <h2 class="western" style="margin-bottom:6px">Scan to judge 🌶️</h2>
+    <p class="dim noprint">Print this or hold your phone up. Judges scan, enter a name + 4-digit PIN, and they're in.</p>
+    <div class="qrbox" id="qr" style="margin:10px auto"></div>
+    <div class="small" style="word-break:break-all;margin:10px 0">${esc(judgeUrl())}</div>
+    <div class="row noprint" style="justify-content:center;gap:8px">
+      <button class="btn ghost sm" data-act="copy">Copy link</button>
+      <button class="btn ghost sm" data-act="print">Print</button>
+    </div>
+    <p class="small mute noprint" style="margin-top:14px">Your scoreboard lives at the same link with <b>#admin</b> on the end.</p>
+  </div>`;
+}
+function drawQR(){
+  const el = document.getElementById('qr'); if(!el) return;
+  if(typeof qrcode !== 'function'){ el.textContent = 'QR library failed to load'; return; }
+  const q = qrcode(0, 'M'); q.addData(judgeUrl()); q.make();
+  el.innerHTML = q.createSvgTag({cellSize: 8, margin: 0, scalable: true});
+}
+
+function adminData(){
+  const c = cfg();
+  const rounds = [['round1','Round 1', allChilis()], ['final','Final', c.finalists || []]];
+  return rounds.map(([r, name, chilis]) => {
+    if(!chilis.length) return '';
+    const js = S.judges.filter(j => S.scores.some(s => s.round === r && s.judgeId === j.id));
+    return `<div class="card"><div class="row between"><h3 class="western">${name} scorecards</h3>${r==='round1' ? '<button class="btn ghost sm" data-act="csv">Download CSV</button>' : ''}</div>
+      <div class="small mute" style="margin:4px 0 8px">Each cell is that judge's total out of 40. Blank = not their chili / not scored.</div>
+      <div class="matrix"><table><thead><tr><th>Judge</th>${chilis.map(ch => `<th class="letter" style="font-size:15px">${ch}</th>`).join('')}</tr></thead><tbody>
+      ${js.length ? js.map(j => `<tr><td>${esc(j.name)}</td>${chilis.map(ch => { const s = S.scores.find(x => x.round===r && x.judgeId===j.id && x.chili===ch); return `<td title="${s ? esc(`T${s.taste} Tx${s.texture} A${s.appearance} Ar${s.aroma}${s.notes ? ' — ' + s.notes : ''}`) : ''}">${s ? s.total : ''}${s && s.notes ? '<sup>✎</sup>' : ''}</td>`; }).join('')}</tr>`).join('') : `<tr><td colspan="${chilis.length+1}" class="mute">No scores yet</td></tr>`}
+      </tbody></table></div></div>`;
+  }).join('') + notesCard();
+}
+function notesCard(){
+  const n = S.scores.filter(s => s.notes);
+  if(!n.length) return '';
+  return `<div class="card"><h3 class="western">Judge notes</h3>${n.map(s => `<div style="margin-top:8px"><span class="letter" style="font-size:16px">${s.chili}</span> <span class="small mute">${esc(s.judgeName)} · ${s.round==='final'?'Final':'R1'}</span><div class="dim">${esc(s.notes)}</div></div>`).join('')}</div>`;
+}
+
+function downloadCSV(){
+  const head = ['round','judge','chili','cook','taste','texture','appearance','aroma','total','notes','updatedAt'];
+  const rows = S.scores.map(s => [s.round, s.judgeName, s.chili, (cfg().cooks||{})[s.chili]||'', s.taste, s.texture, s.appearance, s.aroma, s.total, s.notes||'', s.updatedAt||'']);
+  const csv = [head].concat(rows).map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = (cfg().eventName || 'chili').replace(/\W+/g,'-') + '-scores.csv';
+  a.click();
+}
+
+async function simulate(){
+  const names = ['Sam','Emily','Michael','Abby','Zac','Isaac','Fred','Jack','Ben','Joe'];
+  const quality = {}; allChilis().forEach(ch => quality[ch] = 3 + Math.random()*5);
+  const created = [];
+  for(const n of names){ try{ const r = await Local.call('join', {name:'Robo ' + n, pin:'1111'}); created.push(r.judge); }catch(_){} }
+  let c = cfg();
+  if(c.phase === 'setup'){ await Local.call('admin', {pin:DEMO_PIN, op:'saveConfig', config:Object.assign({}, c, {phase:'round1'})}); }
+  await refresh(); c = cfg();
+  for(const j of created){
+    const jj = S.judges.find(x => x.id === j.id); if(!jj) continue;
+    for(const ch of chilisFor(jj)){
+      const r = () => Math.max(1, Math.min(10, Math.round(quality[ch] + (Math.random()*3 - 1.5))));
+      await Local.call('score', {judgeId:j.id, pin:'1111', round:c.phase, chili:ch, taste:r(), texture:r(), appearance:r(), aroma:r()});
+    }
+  }
+  await refresh(); tab = 'live'; render(); toast('10 robot judges scored ' + ROUND_NAME[c.phase] + ' 🤖');
+}
+
+/* ---------- reveal show ---------- */
+function revealOrder(){
+  const c = cfg();
+  const st = standings('final', c.finalists || []);
+  return st.slice().reverse(); // last place first, champ last
+}
+function renderReveal(){
+  const order = revealOrder();
+  let el = document.getElementById('reveal');
+  if(!el){ el = document.createElement('div'); el.id = 'reveal'; el.className = 'reveal'; document.body.appendChild(el); el.onclick = e => { if(e.target.closest('.x')) return; revealStep++; renderReveal(); }; }
+  const n = order.length;
+  let inner;
+  if(revealStep < 0){
+    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">${esc(cfg().eventName)}</div><div class="place" style="margin-top:12px">The Final ${n}</div></div><div class="hint">Tap to reveal</div>`;
+  }else if(revealStep < n - 1){
+    const r = order[revealStep];
+    const place = n - revealStep;
+    inner = `<div class="stage pop" key="${revealStep}"><div class="place">${place === 2 ? '🥈 Runner-up' : place === 3 ? '🥉 Third place' : place + 'th place'}</div>
+      <div class="big">${r.chili}</div><div class="who">${cook(r.chili)}</div><div class="score">${fmt(r.avg)} / 40</div></div><div class="hint">Tap for ${place-1 === 1 ? 'the champion 🥁' : 'next'}</div>`;
+  }else if(revealStep === n - 1){
+    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">And the champion is…</div></div><div class="hint">Tap</div>`;
+  }else{
+    const w = order[n-1];
+    inner = `<div class="stage pop"><div style="font-size:80px">🏆</div><div class="place">Champion</div>
+      <div class="big">${w ? w.chili : '?'}</div><div class="who">${w ? cook(w.chili) : ''}</div><div class="score">${w ? fmt(w.avg) + ' / 40' : ''}</div></div>`;
+    if(revealStep === n){ confetti(6000); if(!cfg().revealed) saveCfg({revealed:true}); }
+  }
+  el.innerHTML = `<button class="btn ghost sm x" data-act="closeReveal">✕</button>` + inner;
+}
+
+/* ---------- confetti ---------- */
+function confetti(ms){
+  const cv = document.getElementById('confetti'), ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const bits = ['🌶️','🔥','🫑','⭐'];
+  const P = Array.from({length: 120}, () => ({x: Math.random()*cv.width, y: -20 - Math.random()*cv.height*.6, vy: 2+Math.random()*4, vx: -1.5+Math.random()*3, r: Math.random()*6, vr: -.1+Math.random()*.2, s: 18+Math.random()*16, e: bits[Math.floor(Math.random()*bits.length)]}));
+  const end = Date.now() + ms;
+  (function frame(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    P.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; if(p.y > cv.height + 30 && Date.now() < end){ p.y = -30; p.x = Math.random()*cv.width; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.font = p.s + 'px serif'; ctx.fillText(p.e, 0, 0); ctx.restore(); });
+    if(Date.now() < end + 3000) requestAnimationFrame(frame); else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* =========================================================
+   Events
+   ========================================================= */
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  const a = el.dataset.act;
+  if(a === 'open') return openChili(el.dataset.c);
+  if(a === 'back'){ editing = null; return render(); }
+  if(a === 'pick'){ draft[el.dataset.k] = Number(el.dataset.n); const y = scrollY; render(); scrollTo(0,y); return; }
+  if(a === 'save') return saveScore();
+  if(a === 'logout'){ if(await ask('Switch to a different judge on this phone?')){ me = null; lsSet('chili-me', null); render(); } return; }
+
+  if(a === 'tab'){ tab = el.dataset.t; lockPreview = null; return render(); }
+  if(a === 'phase'){
+    const p = el.dataset.p;
+    if(p === 'round1' && cfg().phase === 'setup' && !(await ask('Start Round 1? Judges will see their chilis right away.'))) return;
+    return saveCfg({phase: p, revealed: false}, ROUND_NAME[p] + ' is live');
+  }
+  if(a === 'preview'){
+    lockPreview = cfg().groups.map(g => (standings('round1', g.chilis)[0] || {}).chili);
+    return render();
+  }
+  if(a === 'cancelPreview'){ lockPreview = null; return render(); }
+  if(a === 'confirmFinal'){
+    const fin = lockPreview.filter(Boolean);
+    if(new Set(fin).size !== fin.length){ toast('Pick a different chili for each group'); return; }
+    lockPreview = null;
+    return saveCfg({phase:'final', finalists: fin, revealed:false}, 'Final round is live 🏆');
+  }
+  if(a === 'crown'){
+    const st = standings('final', cfg().finalists || []);
+    if(!st[0] || !st[0].n){ toast('No final scores yet'); return; }
+    let msg = 'Lock the Final? Winner: ' + st[0].chili + (cfg().cooks && cfg().cooks[st[0].chili] ? ' (' + cfg().cooks[st[0].chili] + ')' : '') + ' at ' + fmt(st[0].avg) + '/40.';
+    if(tied(st[0], st[1])) msg += '\n\n⚠️ It is a dead tie with ' + st[1].chili + '. Consider a taste-off first.';
+    if(!(await ask(msg))) return;
+    return saveCfg({phase:'done', winner: st[0].chili, revealed:false}, 'Winner locked 👑');
+  }
+  if(a === 'reveal'){ revealStep = -1; renderReveal(); return; }
+  if(a === 'closeReveal'){ e.stopPropagation(); const r = document.getElementById('reveal'); if(r) r.remove(); return; }
+  if(a === 'removeJudge'){ if(await ask('Remove ' + el.dataset.n + '? Their scores stay in the sheet but they will be signed out.')) adminOp('removeJudge', {judgeId: el.dataset.j}); return; }
+  if(a === 'balance'){
+    if(!(await ask('Re-split all judges evenly across groups (in check-in order)?'))) return;
+    const n = cfg().groupCount;
+    for(let i = 0; i < S.judges.length; i++){
+      const g = i % n;
+      if(Number(S.judges[i].group) !== g) await call('admin', {pin: adminPin, op:'setGroup', judgeId: S.judges[i].id, group: g});
+    }
+    await refresh(); render(); toast('Groups balanced'); return;
+  }
+  if(a === 'saveSetup') return saveSetup();
+  if(a === 'resetScores'){ if(await ask('Erase ALL scores? This cannot be undone.')) { await adminOp('resetScores'); await saveCfg({phase:'setup', finalists:[], winner:null, revealed:false}, 'Scores erased'); } return; }
+  if(a === 'resetAll'){ if(await ask('Erase all judges AND scores? Judges will need to check in again.')) adminOp('resetAll', {config: Object.assign({}, cfg(), {phase:'setup', finalists:[], winner:null, revealed:false})}).then(() => toast('Fresh start')); return; }
+  if(a === 'simulate') return simulate();
+  if(a === 'copy'){ try{ await navigator.clipboard.writeText(judgeUrl()); toast('Link copied'); }catch(_){ prompt('Copy this link:', judgeUrl()); } return; }
+  if(a === 'print') return window.print();
+  if(a === 'csv') return downloadCSV();
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(el.dataset.act === 'setGroup') adminOp('setGroup', {judgeId: el.dataset.j, group: Number(el.value)});
+  if(el.dataset.act === 'pickFinal'){ lockPreview[Number(el.dataset.g)] = el.value; }
+  if(el.id === 'sChilis' || el.id === 'sGroups'){
+    const nc = Math.max(2, Math.min(26, Number(document.getElementById('sChilis').value) || 20));
+    const ng = Math.max(1, Math.min(8, Number(document.getElementById('sGroups').value) || 4));
+    const groups = splitGroups(LETTERS.slice(0, nc), ng);
+    groups.forEach((g,gi) => {
+      const ch = document.querySelector(`[data-gchilis="${gi}"]`);
+      if(ch) ch.value = g.chilis.join(' ');
+    });
+    // number of group rows changed → stash and re-render with new layout
+    if(ng !== cfg().groupCount || nc !== cfg().chiliCount){
+      S.config = Object.assign({}, cfg(), {chiliCount: nc, groupCount: ng, groups});
+      render();
+      toast('Not saved yet — tap Save setup');
+    }
+  }
+});
+
+async function saveSetup(){
+  const c = cfg();
+  const groups = c.groups.map((g,gi) => ({
+    name: (document.querySelector(`[data-gname="${gi}"]`).value || ('Group ' + (gi+1))).trim(),
+    chilis: document.querySelector(`[data-gchilis="${gi}"]`).value.toUpperCase().split(/[^A-Z]+/).filter(Boolean)
+  }));
+  const flat = groups.flatMap(g => g.chilis);
+  if(new Set(flat).size !== flat.length){ toast('A chili is listed in two groups'); return; }
+  const cooks = {};
+  document.querySelectorAll('[data-cook]').forEach(i => { if(i.value.trim()) cooks[i.dataset.cook] = i.value.trim(); });
+  const patch = {
+    eventName: document.getElementById('sEvent').value.trim() || 'Chili Cook-Off',
+    chiliCount: flat.length, groupCount: groups.length, groups, cooks,
+    allJudgesAllGroups: document.getElementById('sAll').checked
+  };
+  await saveCfg(patch, 'Setup saved ✅');
+}
+
+/* =========================================================
+   Render loop
+   ========================================================= */
+function render(){
+  document.title = cfg().eventName + (location.hash === '#admin' ? ' · Head Judge' : '');
+  if(location.hash === '#admin') renderAdmin(); else renderJudge();
+}
+
+function busy(){
+  const a = document.activeElement;
+  if(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return true;
+  if(document.getElementById('reveal')) return true;
+  if(location.hash === '#admin') return tab === 'setup' || tab === 'qr' || !!lockPreview;
+  return !!editing;
+}
+
+async function poll(){
+  await refresh();
+  const c = cfg();
+  if(location.hash !== '#admin' && lastPhase && c.phase !== lastPhase){
+    // the round changed under a judge — kick them out of an open sheet
+    editing = null;
+    toast(c.phase === 'final' ? '🏆 The Final is live!' : c.phase === 'round1' ? '🔔 Round 1 is live!' : c.phase === 'done' ? '🥁 Scores are locked' : 'Round updated');
+  }
+  lastPhase = c.phase;
+  if(S.changed && !busy()) render();
+}
+
+window.addEventListener('hashchange', render);
+window.addEventListener('storage', e => { if(DEMO && e.key === Local.key) poll(); });
+
+(async function start(){
+  app.innerHTML = `<div class="hero"><div class="logo">🌶️</div><div class="dim" style="margin-top:10px">Heating up…</div></div>`;
+  await refresh();
+  lastPhase = cfg().phase;
+  if(location.hash === '#admin' && adminPin && !S.config) await ensureConfig();
+  render();
+  setInterval(poll, location.hash === '#admin' ? 4000 : 6000);
+})();
+
+})();
+</script>
+</body>
+</html>
