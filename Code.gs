@@ -17,9 +17,9 @@
 
 const ADMIN_PIN = '2026';
 
-const JUDGE_HEADERS = ['id', 'name', 'pin', 'group', 'joinedAt'];
+const JUDGE_HEADERS = ['id', 'name', 'pin', 'group', 'joinedAt', 'pick'];
 const SCORE_HEADERS = ['key', 'round', 'judgeId', 'judgeName', 'chili',
-  'taste', 'texture', 'appearance', 'aroma', 'total', 'notes', 'updatedAt'];
+  'taste', 'texture', 'appearance', 'aroma', 'total', 'notes', 'updatedAt', 'spice'];
 
 function doGet(e) { return respond_(e && e.parameter ? e.parameter : {}); }
 
@@ -50,6 +50,7 @@ function route_(action, d) {
     switch (action) {
       case 'join': return join_(d);
       case 'score': return score_(d);
+      case 'predict': return predict_(d);
       case 'admin': return admin_(d);
       default: throw new Error('Unknown action: ' + action);
     }
@@ -69,6 +70,10 @@ function sheet_(name, headers) {
       sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
       sh.setFrozenRows(1);
     }
+  } else if (headers) {
+    // keep header row current when new columns are added
+    const cur = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+    if (cur.join('|') !== headers.join('|')) sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
   }
   return sh;
 }
@@ -99,7 +104,7 @@ function setConfig_(cfg) {
 }
 
 function publicJudge_(j) {
-  return { id: String(j.id), name: String(j.name), group: Number(j.group) || 0, joinedAt: j.joinedAt };
+  return { id: String(j.id), name: String(j.name), group: Number(j.group) || 0, joinedAt: j.joinedAt, pick: String(j.pick || '') };
 }
 
 function publicScore_(s) {
@@ -107,7 +112,7 @@ function publicScore_(s) {
     round: String(s.round), judgeId: String(s.judgeId), judgeName: String(s.judgeName),
     chili: String(s.chili), taste: Number(s.taste), texture: Number(s.texture),
     appearance: Number(s.appearance), aroma: Number(s.aroma), total: Number(s.total),
-    notes: String(s.notes || ''), updatedAt: s.updatedAt
+    notes: String(s.notes || ''), updatedAt: s.updatedAt, spice: Number(s.spice) || 0
   };
 }
 
@@ -144,7 +149,7 @@ function join_(d) {
   counts.forEach(function (c, i) { if (c < counts[group]) group = i; });
   const judge = { id: Utilities.getUuid().slice(0, 8), name: name, pin: pin, group: group, joinedAt: new Date().toISOString() };
   // write the PIN as text so leading zeros survive
-  sheet_('Judges', JUDGE_HEADERS).appendRow([judge.id, judge.name, "'" + pin, group, judge.joinedAt]);
+  sheet_('Judges', JUDGE_HEADERS).appendRow([judge.id, judge.name, "'" + pin, group, judge.joinedAt, '']);
   return { judge: publicJudge_(judge) };
 }
 
@@ -161,14 +166,26 @@ function score_(d) {
     return Math.round(v);
   });
   const total = vals.reduce(function (a, b) { return a + b; }, 0);
+  const sp = Math.round(Number(d.spice));
+  const spice = (sp >= 1 && sp <= 5) ? sp : '';
   const key = d.round + '|' + j.id + '|' + d.chili;
   const row = [key, d.round, String(j.id), String(j.name), String(d.chili)]
-    .concat(vals).concat([total, String(d.notes || '').slice(0, 300), new Date().toISOString()]);
+    .concat(vals).concat([total, String(d.notes || '').slice(0, 300), new Date().toISOString(), spice]);
   const sh = sheet_('Scores', SCORE_HEADERS);
   const existing = rows_('Scores', SCORE_HEADERS).filter(function (s) { return s.key === key; })[0];
   if (existing) sh.getRange(existing._row, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
   return { saved: key };
+}
+
+function predict_(d) {
+  const j = rows_('Judges', JUDGE_HEADERS).filter(function (x) { return String(x.id) === String(d.judgeId); })[0];
+  if (!j || String(j.pin) !== String(d.pin)) throw new Error('Please sign in again');
+  const cfg = getConfig_() || {};
+  if (cfg.phase !== 'final') throw new Error('Picks are closed');
+  if ((cfg.finalists || []).indexOf(String(d.chili)) < 0) throw new Error('Not a finalist');
+  sheet_('Judges', JUDGE_HEADERS).getRange(j._row, 6).setValue(String(d.chili));
+  return {};
 }
 
 function admin_(d) {
@@ -193,6 +210,8 @@ function admin_(d) {
     case 'resetScores': {
       const sh = sheet_('Scores', SCORE_HEADERS);
       if (sh.getLastRow() > 1) sh.deleteRows(2, sh.getLastRow() - 1);
+      const jh = sheet_('Judges', JUDGE_HEADERS);
+      if (jh.getLastRow() > 1) jh.getRange(2, 6, jh.getLastRow() - 1, 1).clearContent();
       return {};
     }
     case 'resetAll': {

@@ -139,7 +139,7 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 <div id="app"></div>
 <div id="toast" class="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="config.js"></script>
+<script src="config.js?v=2"></script>
 <script src="qrcode.js"></script>
 <script>
 (function(){
@@ -219,7 +219,7 @@ const Local = {
     const db = this.load();
     const cfg = db.config || defaultConfig();
     if(action === 'state'){
-      return {config: db.config, judges: db.judges.map(j => ({id:j.id, name:j.name, group:j.group, joinedAt:j.joinedAt})), scores: db.scores};
+      return {config: db.config, judges: db.judges.map(j => ({id:j.id, name:j.name, group:j.group, joinedAt:j.joinedAt, pick:j.pick||''})), scores: db.scores};
     }
     if(action === 'join'){
       const name = String(d.name||'').trim(), pin = String(d.pin||'').trim();
@@ -245,9 +245,17 @@ const Local = {
       let total = 0;
       for(const [k] of CATS){ const v = Math.round(Number(d[k])); if(!(v>=1 && v<=10)) throw new Error('Scores must be 1–10'); s[k]=v; total+=v; }
       s.total = total;
+      const sp = Math.round(Number(d.spice)); s.spice = (sp >= 1 && sp <= 5) ? sp : 0;
       const i = db.scores.findIndex(x => x.round===s.round && x.judgeId===s.judgeId && x.chili===s.chili);
       if(i >= 0) db.scores[i] = s; else db.scores.push(s);
       this.save(db); return {};
+    }
+    if(action === 'predict'){
+      const j = db.judges.find(x => x.id === d.judgeId);
+      if(!j || j.pin !== String(d.pin)) throw new Error('Please sign in again');
+      if(cfg.phase !== 'final') throw new Error('Picks are closed');
+      if(!(cfg.finalists || []).includes(d.chili)) throw new Error('Not a finalist');
+      j.pick = d.chili; this.save(db); return {};
     }
     if(action === 'admin'){
       if(String(d.pin) !== DEMO_PIN) throw new Error('Wrong master PIN');
@@ -256,7 +264,7 @@ const Local = {
         case 'saveConfig': db.config = d.config; break;
         case 'setGroup': { const j = db.judges.find(x => x.id === d.judgeId); if(j) j.group = Number(d.group); break; }
         case 'removeJudge': db.judges = db.judges.filter(x => x.id !== d.judgeId); break;
-        case 'resetScores': db.scores = []; break;
+        case 'resetScores': db.scores = []; db.judges.forEach(j => j.pick = ''); break;
         case 'resetAll': db.scores = []; db.judges = []; if(d.config) db.config = d.config; break;
         default: throw new Error('Unknown admin op');
       }
@@ -352,7 +360,7 @@ let lastPhase = null;
 function myJudge(){
   if(!me) return null;
   const j = S.judges.find(x => x.id === me.id);
-  return j ? Object.assign({}, me, {group: Number(j.group)}) : (S.loaded ? null : me);
+  return j ? Object.assign({}, me, {group: Number(j.group), pick: j.pick || ''}) : (S.loaded ? null : me);
 }
 
 function renderJudge(){
@@ -391,7 +399,12 @@ function renderJudge(){
     const done = list.filter(ch => mine.some(s => s.chili === ch)).length;
     const pct = list.length ? Math.round(done / list.length * 100) : 0;
     body = `
-      ${c.phase==='final' ? `<div class="card center"><div style="font-size:40px">🏆</div><h2 class="western">The Final ${list.length}</h2><p class="dim small" style="margin:6px 0 0">Each group's champ. Every judge scores all of them. Winner takes all.</p></div>` : ''}
+      ${c.phase==='final' ? `<div class="card center"><div style="font-size:40px">🏆</div><h2 class="western">The Final ${list.length}</h2><p class="dim small" style="margin:6px 0 0">Each group's champ. Every judge scores all of them. Winner takes all.</p></div>
+      <div class="card center" style="border-color:${j.pick ? '#7a5a14' : 'var(--ember)'}">
+        <div class="row" style="justify-content:center;gap:8px"><span style="font-size:26px">🔮</span><h3 class="western">Call your shot</h3></div>
+        <p class="dim small" style="margin:6px 0 10px">${j.pick ? `You picked <b class="letter" style="font-size:16px">${esc(j.pick)}</b> to win it all. You can switch until the final locks.` : 'Which chili will the whole panel crown? Call it right and you get a shoutout at the reveal.'}</p>
+        <div class="row" style="justify-content:center;gap:10px;flex-wrap:wrap">${list.map(ch => `<button class="btn ${j.pick===ch ? 'gold' : 'ghost'} sm" style="min-width:58px;font-size:20px;font-family:Rye,Georgia,serif" data-act="predict" data-c="${ch}">${ch}</button>`).join('')}</div>
+      </div>` : ''}
       <div class="card">
         <div class="row between"><b>${done} of ${list.length} scored</b><span class="small mute">${done===list.length && list.length ? 'All done 🔥 You can still tweak until the round locks.' : 'Tap a chili to score it'}</span></div>
         <div class="progress" style="margin-top:10px"><i style="width:${pct}%"></i></div>
@@ -409,7 +422,7 @@ function renderJudge(){
         <div class="small mute">Champion</div>
         <div class="western" style="font-size:72px;color:#ffd9a8;line-height:1.1">${esc(c.winner)}</div>
         ${cook(c.winner) ? `<h2 class="western">${cook(c.winner)}</h2>` : ''}
-        <p class="dim">Thanks for judging!</p></div>`;
+        <p class="dim">Thanks for judging!</p></div>${myAwardsHtml(j)}`;
     }else{
       body = `<div class="card center"><div class="drum">🥁</div><h2 class="western">Scores are locked</h2><p class="dim">Stand by for the big reveal…</p></div>`;
     }
@@ -479,6 +492,13 @@ function renderScoreSheet(j){
           ${[1,2,3,4,5,6,7,8,9,10].map(n => `<button data-act="pick" data-k="${k}" data-n="${n}" class="${draft[k]===n?'on':''}" ${draft[k]===n?`style="background:${heatColor(n)}"`:''}>${n}</button>`).join('')}
         </div>
       </div>`).join('')}
+    <div class="card cat" style="border-style:dashed">
+      <div class="row"><h3>🥵 Heat level <span class="small mute" style="font-weight:400">(just for fun, doesn't count)</span></h3></div>
+      <div class="nums" style="grid-template-columns:repeat(5,1fr)">
+        ${[1,2,3,4,5].map(n => `<button data-act="pick" data-k="spice" data-n="${n}" class="${draft.spice===n?'on':''}" ${draft.spice===n?`style="background:${heatColor(n*2)};font-size:14px"`:'style="font-size:14px"'}>${n}<span style="font-size:13px">🌶️</span></button>`).join('')}
+      </div>
+      <div class="row between small mute" style="margin-top:6px"><span>Mild</span><span>Crowns the Spiciest Chili</span><span>Face-melting</span></div>
+    </div>
     <label for="notes">Notes (only you and the host see these)</label>
     <textarea id="notes" rows="2" style="margin-bottom:12px" maxlength="300" placeholder="Smoky, great beans, needs salt…">${esc(draft.notes || '')}</textarea>
     <div class="sticky">
@@ -519,7 +539,7 @@ async function saveScore(){
 function openChili(ch){
   const j = myJudge();
   const s = scoresOf(cfg().phase, j.id).find(x => x.chili === ch);
-  draft = s ? {taste:s.taste, texture:s.texture, appearance:s.appearance, aroma:s.aroma, notes:s.notes||''} : {};
+  draft = s ? {taste:s.taste, texture:s.texture, appearance:s.appearance, aroma:s.aroma, spice:Number(s.spice)||undefined, notes:s.notes||''} : {};
   editing = ch; render(); window.scrollTo(0,0);
 }
 
@@ -660,8 +680,10 @@ function adminLive(){
   if(c.phase === 'final' || c.phase === 'done'){
     h += `<div class="card"><h2 class="western" style="margin-bottom:8px">🏆 Final Round</h2>
       ${standingsTable('final', c.finalists || [], () => S.judges.length)}
-      <div class="small mute" style="margin-top:8px">Ranked by average total (out of 40). Ties broken by Taste, then Aroma.</div></div>`;
+      <div class="small mute" style="margin-top:8px">Ranked by average total (out of 40). Ties broken by Taste, then Aroma.</div>
+      ${picksSummary()}</div>`;
   }
+  h += awardsRaceHtml();
   h += `<h2 class="western" style="margin:20px 0 4px">Round 1 · Groups</h2>
     <div class="groups">${c.groups.map((g,gi) => {
       const js = judgesForGroup(gi);
@@ -769,8 +791,8 @@ function notesCard(){
 }
 
 function downloadCSV(){
-  const head = ['round','judge','chili','cook','taste','texture','appearance','aroma','total','notes','updatedAt'];
-  const rows = S.scores.map(s => [s.round, s.judgeName, s.chili, (cfg().cooks||{})[s.chili]||'', s.taste, s.texture, s.appearance, s.aroma, s.total, s.notes||'', s.updatedAt||'']);
+  const head = ['round','judge','chili','cook','taste','texture','appearance','aroma','total','heat','notes','updatedAt'];
+  const rows = S.scores.map(s => [s.round, s.judgeName, s.chili, (cfg().cooks||{})[s.chili]||'', s.taste, s.texture, s.appearance, s.aroma, s.total, s.spice||'', s.notes||'', s.updatedAt||'']);
   const csv = [head].concat(rows).map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
@@ -790,10 +812,95 @@ async function simulate(){
     const jj = S.judges.find(x => x.id === j.id); if(!jj) continue;
     for(const ch of chilisFor(jj)){
       const r = () => Math.max(1, Math.min(10, Math.round(quality[ch] + (Math.random()*3 - 1.5))));
-      await Local.call('score', {judgeId:j.id, pin:'1111', round:c.phase, chili:ch, taste:r(), texture:r(), appearance:r(), aroma:r()});
+      await Local.call('score', {judgeId:j.id, pin:'1111', round:c.phase, chili:ch, taste:r(), texture:r(), appearance:r(), aroma:r(), spice: 1 + (ch.charCodeAt(0) % 5)});
     }
   }
+  if(c.phase === 'final') for(const j of created){ const f = c.finalists || []; if(f.length) await Local.call('predict', {judgeId:j.id, pin:'1111', chili: f[Math.floor(Math.random()*f.length)]}); }
   await refresh(); tab = 'live'; render(); toast('10 robot judges scored ' + ROUND_NAME[c.phase] + ' 🤖');
+}
+
+
+function picksSummary(){
+  const c = cfg();
+  const picks = S.judges.filter(j => j.pick);
+  if(!(c.finalists||[]).length) return '';
+  return `<div class="row wrapf" style="margin-top:12px;gap:8px"><span class="small dim">🔮 Called shots: <b>${picks.length}/${S.judges.length}</b></span>
+    ${c.finalists.map(ch => `<span class="pill">${ch}: ${picks.filter(j => j.pick === ch).length}</span>`).join('')}</div>`;
+}
+function awardsRaceHtml(){
+  const aw = awards();
+  if(!aw.length) return '';
+  return `<div class="card"><div class="row between"><h2 class="western">🏅 Judges' awards race</h2><span class="small mute">Spoilers! Revealed in the show</span></div>
+    <div class="stat" style="margin-top:10px">${aw.map(a => `<div><span class="small mute">${a.emoji} ${a.title}</span>${awardWinnerHtml(a, false)}<div class="small mute">${esc(a.desc)}</div></div>`).join('')}</div></div>`;
+}
+function myAwardsHtml(j){
+  const mine = awards().filter(a => a.names && a.names.includes(j.name));
+  if(calledIt().includes(j.name)) mine.unshift({emoji:'🔮', title:'Called It!', desc:'You picked the champ.'});
+  if(!mine.length) return '';
+  return `<div class="card center"><div class="small mute">Your hardware</div>${mine.map(a => `<div style="margin-top:12px"><div style="font-size:44px">${a.emoji}</div><h3 class="western" style="color:var(--gold)">${a.title}</h3><div class="small dim">${esc(a.desc)}</div></div>`).join('')}</div>`;
+}
+
+/* ---------- awards (the game layer) ---------- */
+const mean = a => a.length ? a.reduce((x,y) => x + y, 0) / a.length : null;
+function extreme(rows, dir){
+  // rows: [{name, v}] → {v, names[]} with ties kept
+  const ok = rows.filter(r => r.v != null);
+  if(!ok.length) return null;
+  const best = dir > 0 ? Math.max(...ok.map(r => r.v)) : Math.min(...ok.map(r => r.v));
+  return {v: best, names: ok.filter(r => Math.abs(r.v - best) < 1e-9).map(r => r.name)};
+}
+function chiliAvgSpice(){
+  const by = {};
+  S.scores.forEach(s => { if(Number(s.spice) > 0) (by[s.chili] = by[s.chili] || []).push(Number(s.spice)); });
+  return by;
+}
+function awards(){
+  const out = [];
+  const byJ = S.judges.map(j => ({j, sc: S.scores.filter(s => s.judgeId === j.id)})).filter(x => x.sc.length >= 2);
+  // 🌶️ Spiciest Chili
+  const sp = chiliAvgSpice();
+  const spicy = extreme(Object.keys(sp).map(ch => ({name: ch, v: mean(sp[ch])})), 1);
+  if(spicy) out.push({key:'spicy', emoji:'🌶️', title:'Spiciest Chili', chilis: spicy.names, desc: `${fmt(spicy.v)} out of 5 peppers on the judges' heat meter`});
+  // 🧸 / 🔥 generous vs tough
+  if(byJ.length >= 2){
+    const given = byJ.map(x => ({name: x.j.name, v: mean(x.sc.map(s => Number(s.total)))}));
+    const hi = extreme(given, 1), lo = extreme(given, -1);
+    if(hi && lo && hi.v !== lo.v){
+      out.push({key:'softie', emoji:'🧸', title:'The Softie', names: hi.names, desc: `Generous to a fault: ${fmt(hi.v)} / 40 average`});
+      out.push({key:'critic', emoji:'🔥', title:'Toughest Critic', names: lo.names, desc: `Brutal. Just ${fmt(lo.v)} / 40 average`});
+    }
+  }
+  // 🥵 Heat Seeker: judge whose favorite chili ran hottest
+  if(Object.keys(sp).length && byJ.length){
+    const hs = byJ.map(x => {
+      const fav = x.sc.slice().sort((a,b) => b.total - a.total)[0];
+      return {name: x.j.name, v: sp[fav.chili] ? mean(sp[fav.chili]) : null};
+    });
+    const h = extreme(hs, 1);
+    if(h && h.v >= 3) out.push({key:'heat', emoji:'🥵', title:'Heat Seeker', names: h.names, desc: `Their favorite chili clocked ${fmt(h.v)} / 5 peppers`});
+  }
+  // 🎯 Golden Tongue: closest to the panel average
+  const pool = {};
+  S.scores.forEach(s => { const k = s.round + '|' + s.chili; (pool[k] = pool[k] || []).push(Number(s.total)); });
+  const gt = byJ.map(x => {
+    const diffs = x.sc.filter(s => pool[s.round + '|' + s.chili].length >= 2).map(s => Math.abs(s.total - mean(pool[s.round + '|' + s.chili])));
+    return {name: x.j.name, v: diffs.length >= 2 ? mean(diffs) : null};
+  });
+  const g = extreme(gt, -1);
+  if(g && byJ.length >= 3) out.push({key:'golden', emoji:'🎯', title:'Golden Tongue', names: g.names, desc: 'Scores closest to the whole panel. This judge just gets it.'});
+  return out;
+}
+function calledIt(){
+  const c = cfg();
+  const champ = c.winner || (revealOrder().slice(-1)[0] || {}).chili;
+  return S.judges.filter(j => j.pick && j.pick === champ).map(j => j.name);
+}
+function awardWinnerHtml(a, big){
+  if(a.chilis){
+    const n = a.chilis.length, size = big ? (n === 1 ? 'min(28vw,180px)' : n === 2 ? 'min(20vw,130px)' : 'min(13vw,84px)') : '20px';
+    return `<div class="row" style="justify-content:center;gap:${big?'28px':'10px'};flex-wrap:wrap">${a.chilis.map(ch => `<div style="text-align:center"><div class="${big?'big':'letter'}" style="font-size:${size}">${ch}</div>${cook(ch) ? `<div class="${big?'who':'small dim'}" style="${big?'font-size:min(5vw,28px)':''}">${cook(ch)}</div>` : ''}</div>`).join('')}</div>${big && n > 1 ? '<div class="place" style="margin-top:6px">It\'s a tie!</div>' : ''}`;
+  }
+  return `<div class="who" style="font-size:${big?'min(10vw,56px)':'20px'}">${a.names.map(esc).join(' & ')}</div>`;
 }
 
 /* ---------- reveal show ---------- */
@@ -802,26 +909,48 @@ function revealOrder(){
   const st = standings('final', c.finalists || []);
   return st.slice().reverse(); // last place first, champ last
 }
+function revealSlides(){
+  const order = revealOrder(), n = order.length, s = [{t:'intro', n}];
+  const aw = awards();
+  if(aw.length) s.push({t:'awardsIntro'});
+  aw.forEach(a => s.push({t:'award', a}));
+  order.slice(0, Math.max(0, n-1)).forEach((r,i) => s.push({t:'place', r, place: n - i}));
+  s.push({t:'drum'});
+  s.push({t:'champ', r: order[n-1]});
+  if(S.judges.some(j => j.pick)) s.push({t:'called', names: calledIt()});
+  return s;
+}
 function renderReveal(){
-  const order = revealOrder();
+  const slides = revealSlides();
   let el = document.getElementById('reveal');
-  if(!el){ el = document.createElement('div'); el.id = 'reveal'; el.className = 'reveal'; document.body.appendChild(el); el.onclick = e => { if(e.target.closest('.x')) return; revealStep++; renderReveal(); }; }
-  const n = order.length;
-  let inner;
-  if(revealStep < 0){
-    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">${esc(cfg().eventName)}</div><div class="place" style="margin-top:12px">The Final ${n}</div></div><div class="hint">Tap to reveal</div>`;
-  }else if(revealStep < n - 1){
-    const r = order[revealStep];
-    const place = n - revealStep;
-    inner = `<div class="stage pop" key="${revealStep}"><div class="place">${place === 2 ? '🥈 Runner-up' : place === 3 ? '🥉 Third place' : place + 'th place'}</div>
-      <div class="big">${r.chili}</div><div class="who">${cook(r.chili)}</div><div class="score">${fmt(r.avg)} / 40</div></div><div class="hint">Tap for ${place-1 === 1 ? 'the champion 🥁' : 'next'}</div>`;
-  }else if(revealStep === n - 1){
-    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">And the champion is…</div></div><div class="hint">Tap</div>`;
-  }else{
-    const w = order[n-1];
+  if(!el){ el = document.createElement('div'); el.id = 'reveal'; el.className = 'reveal'; document.body.appendChild(el); el.onclick = e => { if(e.target.closest('.x')) return; if(revealStep < slides.length - 1){ revealStep++; renderReveal(); } }; }
+  revealStep = Math.max(0, Math.min(revealStep, slides.length - 1));
+  const sl = slides[revealStep], last = revealStep === slides.length - 1;
+  const hint = t => last ? '' : `<div class="hint">${t || 'Tap'}</div>`;
+  let inner = '';
+  if(sl.t === 'intro'){
+    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">${esc(cfg().eventName)}</div><div class="place" style="margin-top:12px">The Final ${sl.n}</div></div>${hint('Tap to start the show')}`;
+  }else if(sl.t === 'awardsIntro'){
+    inner = `<div class="stage pop"><div style="font-size:80px">🏅</div><div class="who">First, the judges' awards</div><div class="place" style="margin-top:10px">Some of you are about to get called out</div></div>${hint()}`;
+  }else if(sl.t === 'award'){
+    inner = `<div class="stage pop"><div style="font-size:min(24vw,120px)">${sl.a.emoji}</div><div class="place" style="font-size:28px;color:var(--gold)">${sl.a.title}</div>
+      ${awardWinnerHtml(sl.a, true)}<div class="score" style="color:var(--dim);font-family:inherit;font-size:16px;margin-top:14px">${esc(sl.a.desc)}</div></div>${hint()}`;
+  }else if(sl.t === 'place'){
+    const p = sl.place;
+    inner = `<div class="stage pop"><div class="place">${p === 2 ? '🥈 Runner-up' : p === 3 ? '🥉 Third place' : p + 'th place'}</div>
+      <div class="big">${sl.r.chili}</div><div class="who">${cook(sl.r.chili)}</div><div class="score">${fmt(sl.r.avg)} / 40</div></div>${hint(p === 2 ? 'Tap for the champion 🥁' : 'Tap for next')}`;
+  }else if(sl.t === 'drum'){
+    inner = `<div class="stage"><div class="drum">🥁</div><div class="who" style="margin-top:20px">And the champion is…</div></div>${hint()}`;
+  }else if(sl.t === 'champ'){
+    const w = sl.r;
     inner = `<div class="stage pop"><div style="font-size:80px">🏆</div><div class="place">Champion</div>
-      <div class="big">${w ? w.chili : '?'}</div><div class="who">${w ? cook(w.chili) : ''}</div><div class="score">${w ? fmt(w.avg) + ' / 40' : ''}</div></div>`;
-    if(revealStep === n){ confetti(6000); if(!cfg().revealed) saveCfg({revealed:true}); }
+      <div class="big">${w ? w.chili : '?'}</div><div class="who">${w ? cook(w.chili) : ''}</div><div class="score">${w ? fmt(w.avg) + ' / 40' : ''}</div></div>${hint(last ? '' : 'Tap: who called it?')}`;
+    confetti(6000); if(!cfg().revealed) saveCfg({revealed:true});
+  }else if(sl.t === 'called'){
+    inner = sl.names.length
+      ? `<div class="stage pop"><div style="font-size:90px">🔮</div><div class="place" style="font-size:28px;color:var(--gold)">Called It!</div><div class="who" style="font-size:min(9vw,48px)">${sl.names.map(esc).join(' · ')}</div><div class="score" style="color:var(--dim);font-family:inherit;font-size:16px;margin-top:14px">Picked the champ before the final scores came in</div></div>`
+      : `<div class="stage pop"><div style="font-size:90px">😱</div><div class="place" style="font-size:28px;color:var(--gold)">Nobody called it!</div><div class="who">Total upset.</div></div>`;
+    if(sl.names.length) confetti(4000);
   }
   el.innerHTML = `<button class="btn ghost sm x" data-act="closeReveal">✕</button>` + inner;
 }
@@ -851,6 +980,15 @@ document.addEventListener('click', async e => {
   if(a === 'back'){ editing = null; return render(); }
   if(a === 'pick'){ draft[el.dataset.k] = Number(el.dataset.n); const y = scrollY; render(); scrollTo(0,y); return; }
   if(a === 'save') return saveScore();
+  if(a === 'predict'){
+    const j = myJudge(); if(!j) return;
+    try{
+      await call('predict', {judgeId: j.id, pin: me.pin, chili: el.dataset.c});
+      const jj = S.judges.find(x => x.id === j.id); if(jj) jj.pick = el.dataset.c;
+      render(); toast('🔮 Locked in: ' + el.dataset.c + ' to win');
+    }catch(ex){ toast('⚠️ ' + ex.message); }
+    return;
+  }
   if(a === 'logout'){ if(await ask('Switch to a different judge on this phone?')){ me = null; lsSet('chili-me', null); render(); } return; }
 
   if(a === 'tab'){ tab = el.dataset.t; lockPreview = null; return render(); }
@@ -878,7 +1016,7 @@ document.addEventListener('click', async e => {
     if(!(await ask(msg))) return;
     return saveCfg({phase:'done', winner: st[0].chili, revealed:false}, 'Winner locked 👑');
   }
-  if(a === 'reveal'){ revealStep = -1; renderReveal(); return; }
+  if(a === 'reveal'){ revealStep = 0; renderReveal(); return; }
   if(a === 'closeReveal'){ e.stopPropagation(); const r = document.getElementById('reveal'); if(r) r.remove(); return; }
   if(a === 'removeJudge'){ if(await ask('Remove ' + el.dataset.n + '? Their scores stay in the sheet but they will be signed out.')) adminOp('removeJudge', {judgeId: el.dataset.j}); return; }
   if(a === 'balance'){
